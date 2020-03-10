@@ -1,4 +1,4 @@
-# SharedArray-Package
+# SharedArray
 Zero-copy sharing between managed and native arrays in Unity
 
 
