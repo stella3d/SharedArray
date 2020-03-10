@@ -23,6 +23,16 @@ describe how it integrates with the safety system
 
 ## Aliasing
 
-describe how the aliasing feature works
+It's possible to have the `NativeArray` representation of the data be of a different type than the source managed array.  
+This is how we can get around the overhead of converting back to `UnityEngine` types (for types that are identical in memory).
 
-The only safety check that aliasing makes is that the types are both `unmanaged` and the same size.
+To do so, create the `SharedArray` with 2 types instead of 1 :
+
+```csharp
+Vector4[] source = new Vector4[64];
+SharedArray<Vector4, float4> shared = new SharedArray(source);
+NativeArray<float4> native = shared;
+Vector4[] asManaged = shared;
+```
+
+The only safety check that aliasing makes is that the types are both `unmanaged` and the same size.  
