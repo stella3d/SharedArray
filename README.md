@@ -30,7 +30,7 @@ To do so, create the `SharedArray` with 2 types instead of 1 :
 
 ```csharp
 Vector4[] source = new Vector4[64];
-SharedArray<Vector4, float4> shared = new SharedArray(source);
+SharedArray<Vector4, float4> shared = new SharedArray<Vector4, float4>(source);
 NativeArray<float4> native = shared;
 Vector4[] asManaged = shared;
 ```
