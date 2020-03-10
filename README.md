@@ -10,10 +10,10 @@ In 2018+, we have the C# job system & burst compiler, which allow for much more 
 
 But there are two points of friction / inefficiency when it comees to bridging the gap between these two:
  
-1) you have to use `NativeArray<T>` in jobs, which means if you want to pass data to a method that takes `T[]`, you need to do some wasteful copying 
+1) you have to use `NativeArray<T>` in jobs, which means if you want to do some calculations in a job and pass that data to a method that takes `T[]`, you need to do some wasteful copying.
 
 2) `Unity.Mathematics` package has special new types that work with Burst, and replace the existing Unity math structs and methods.  
-We want to both the compiler-specific performance advantage of using those types, without the overhead of converting back from `float4` -> `Vector4`.
+We want to get the compiler-specific performance advantage of using those new types, without the overhead of converting back from `Unity.Mathematics` types to `UnityEngine` types (such as `float4` -> `Vector4`).
 
 
 ## Safety
