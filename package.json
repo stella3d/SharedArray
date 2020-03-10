@@ -1,0 +1,18 @@
+{
+  "name": "com.stella3d.sharedarray",
+  "version": "0.1.0",
+  "displayName": "Shared Arrays",
+  "description": "Zero-copy sharing between managed and native arrays",
+  "unity": "2018.4",
+  "unityRelease": "17f1",
+  "dependencies": {},
+  "keywords": [
+    "Shared",
+    "NativeArray"
+  ],
+  "author": {
+    "name": "Stella Cannefax",
+    "email": "stella@unity3d.com",
+    "url": "https://www.unity3d.com"
+  }
+}
