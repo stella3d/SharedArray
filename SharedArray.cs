@@ -4,15 +4,25 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-using UnityEngine;
 
 namespace Stella3D
 {
+    /// <summary>
+    /// An array usable as both a NativeArray and managed array
+    /// </summary>
+    /// <typeparam name="T">The type of the array element</typeparam>
     public class SharedArray<T> : SharedArray<T, T> where T : unmanaged 
     {
         public SharedArray(T[] managed) { Initialize(managed); }
     }
 
+    /// <summary>
+    /// An array usable as both a NativeArray and managed array
+    /// </summary>
+    /// <typeparam name="T">The element type in the managed representation</typeparam>
+    /// <typeparam name="TNative">
+    /// The element type in the NativeArray representation.  Must be the same size as T.
+    /// </typeparam>
     public class SharedArray<T, TNative> : IDisposable, IEnumerable<T> 
         where T : unmanaged 
         where TNative : unmanaged
@@ -24,8 +34,6 @@ namespace Stella3D
         protected NativeArray<TNative> m_Native;
 
         public int Length => m_Managed.Length;
-
-        protected SharedArray() { }
 
         public unsafe SharedArray(T[] managed)
         {
@@ -39,7 +47,9 @@ namespace Stella3D
             
             Initialize(managed);
         }
-
+        
+        protected SharedArray() { }
+        
         ~SharedArray() { Dispose(); }
         
         public static implicit operator T[](SharedArray<T, TNative> self)
@@ -67,13 +77,14 @@ namespace Stella3D
 
         protected unsafe void InitializeNative()
         {
+            // this is the trick to making a NativeArray view of a managed array (or any pointer)
             fixed (void* ptr = m_Managed)
             {
                 m_Native = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<TNative>
                     (ptr, m_Managed.Length, Allocator.None);
             }
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
             m_SafetyHandle = AtomicSafetyHandle.Create();
             NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref m_Native, m_SafetyHandle);
 #endif
@@ -81,12 +92,13 @@ namespace Stella3D
 
         public void Resize(int newSize)
         {
-            if (newSize == m_Managed.Length)
+            if (newSize == m_Managed.Length) 
                 return;
-
+            
+#if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
             // no jobs can be using the data when we resize it
             AtomicSafetyHandle.CheckWriteAndThrow(m_SafetyHandle);
-
+#endif
             if (m_GcHandle.IsAllocated) m_GcHandle.Free();
             Array.Resize(ref m_Managed, newSize);
             m_GcHandle = GCHandle.Alloc(m_Managed, GCHandleType.Pinned);
@@ -97,6 +109,7 @@ namespace Stella3D
         
         public void Dispose()
         {
+            AtomicSafetyHandle.EnforceAllBufferJobsHaveCompletedAndRelease(m_SafetyHandle);
             m_Managed = null;
             if (m_GcHandle.IsAllocated) m_GcHandle.Free();
         }
