@@ -18,7 +18,9 @@ We want to get the compiler-specific performance advantage of using those new ty
 
 ## Safety
 
-describe how it integrates with the safety system
+When accessing the data as a managed array, the job safety system makes sure that no jobs are reading or writing the data, using the normal job safety system
+
+(more detail on safety system / integration with it goes here)
 
 
 ## Aliasing
