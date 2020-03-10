@@ -21,14 +21,16 @@ namespace Stella3D
     /// </summary>
     /// <typeparam name="T">The element type in the managed representation</typeparam>
     /// <typeparam name="TNative">
-    /// The element type in the NativeArray representation.  Must be the same size as T.
+    /// The element type in the NativeArray representation.  Must be the same size as T
     /// </typeparam>
     public class SharedArray<T, TNative> : IDisposable, IEnumerable<T> 
         where T : unmanaged 
         where TNative : unmanaged
     {
         protected GCHandle m_GcHandle;
+#if UNITY_EDITOR
         protected AtomicSafetyHandle m_SafetyHandle;
+#endif
 
         protected T[] m_Managed;
         protected NativeArray<TNative> m_Native;
@@ -103,13 +105,17 @@ namespace Stella3D
             Array.Resize(ref m_Managed, newSize);
             m_GcHandle = GCHandle.Alloc(m_Managed, GCHandleType.Pinned);
 
+#if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
             AtomicSafetyHandle.Release(m_SafetyHandle);
+#endif
             InitializeNative();
         }
         
         public void Dispose()
         {
+#if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
             AtomicSafetyHandle.EnforceAllBufferJobsHaveCompletedAndRelease(m_SafetyHandle);
+#endif
             m_Managed = null;
             if (m_GcHandle.IsAllocated) m_GcHandle.Free();
         }
