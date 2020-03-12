@@ -1,6 +1,7 @@
 # SharedArray
 Zero-copy sharing between managed and native arrays in Unity
 
+(this is **close to ready for real use**, i will make a release when i think it's polished enough for people to use)
 
 ## Why
 
