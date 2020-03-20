@@ -86,7 +86,7 @@ namespace Stella3D
                     (ptr, m_Managed.Length, Allocator.None);
             }
 
-#if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
+#if UNITY_EDITOR
             m_SafetyHandle = AtomicSafetyHandle.Create();
             NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref m_Native, m_SafetyHandle);
 #endif
@@ -105,7 +105,7 @@ namespace Stella3D
             Array.Resize(ref m_Managed, newSize);
             m_GcHandle = GCHandle.Alloc(m_Managed, GCHandleType.Pinned);
 
-#if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
+#if UNITY_EDITOR
             AtomicSafetyHandle.Release(m_SafetyHandle);
 #endif
             InitializeNative();
