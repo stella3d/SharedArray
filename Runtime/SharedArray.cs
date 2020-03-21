@@ -14,6 +14,7 @@ namespace Stella3D
     public class SharedArray<T> : SharedArray<T, T> where T : unmanaged 
     {
         public SharedArray(T[] managed) { Initialize(managed); }
+        public SharedArray(int size) { Initialize(new T[size]); }
     }
 
     /// <summary>
@@ -23,6 +24,7 @@ namespace Stella3D
     /// <typeparam name="TNative">
     /// The element type in the NativeArray representation.  Must be the same size as T
     /// </typeparam>
+    // TODO - implement IEquatable<SharedArray>, IEquatable<T[]> ?
     public class SharedArray<T, TNative> : IDisposable, IEnumerable<T> 
         where T : unmanaged 
         where TNative : unmanaged
@@ -37,19 +39,28 @@ namespace Stella3D
 
         public int Length => m_Managed.Length;
 
-        public unsafe SharedArray(T[] managed)
+        public SharedArray(T[] managed)
         {
-            if (sizeof(T) != sizeof(TNative))
-            {
-                var msg = $"size of native alias type {typeof(TNative).FullName} ({sizeof(TNative)} bytes) " +
-                          $"must be equal to size of type {typeof(T).FullName} ({sizeof(T)} bytes)";
-
-                throw new InvalidOperationException(msg);
-            }
-            
+            CheckTypesAreEqualSize();
             Initialize(managed);
         }
         
+        public SharedArray(int size)
+        {
+            CheckTypesAreEqualSize();
+            Initialize(new T[size]);
+        }
+
+        static unsafe void CheckTypesAreEqualSize()
+        {
+            if (sizeof(T) != sizeof(TNative))
+            {
+                throw new InvalidOperationException(
+                    $"size of native alias type {typeof(TNative).FullName} ({sizeof(TNative)} bytes) " +
+                    $"must be equal to size of type {typeof(T).FullName} ({sizeof(T)} bytes)");
+            }
+        }
+
         protected SharedArray() { }
         
         ~SharedArray() { Dispose(); }

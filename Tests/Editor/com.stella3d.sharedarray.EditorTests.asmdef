@@ -2,7 +2,8 @@
     "name": "com.stella3d.sharedarray.EditorTests",
     "references": [
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "com.stella3d.sharedarray"
     ],
     "includePlatforms": [
         "Editor"
