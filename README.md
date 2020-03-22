@@ -17,7 +17,7 @@ But there are two points of friction / inefficiency when it comes to bridging th
 We want to get the compiler-specific performance advantage of using those new types, without the overhead of converting back from `Unity.Mathematics` types to `UnityEngine` types (such as `float4` -> `Vector4`).
 
 
-## Safety
+## Safety System
 
 Unity's job system has a [safety system for reading & writing data](https://docs.unity3d.com/Manual/JobSystemSafetySystem.html) (in the Editor only).  This catches cases where a data race would occur and warns you about it.
 
