@@ -24,7 +24,6 @@ namespace Stella3D
     /// <typeparam name="TNative">
     /// The element type in the NativeArray representation.  Must be the same size as T
     /// </typeparam>
-    // TODO - implement IEquatable<SharedArray>, IEquatable<T[]> ?
     public class SharedArray<T, TNative> : IDisposable, IEnumerable<T> 
         where T : unmanaged 
         where TNative : unmanaged
@@ -33,7 +32,6 @@ namespace Stella3D
 #if UNITY_EDITOR
         protected AtomicSafetyHandle m_SafetyHandle;
 #endif
-
         protected T[] m_Managed;
         protected NativeArray<TNative> m_Native;
 
@@ -65,6 +63,11 @@ namespace Stella3D
         
         ~SharedArray() { Dispose(); }
         
+        public ref T GetPinnableReference() => ref m_Managed[0];
+        
+        // implicit conversion mean you can pass a SharedArray where either type of NativeArray is expected
+        public static implicit operator NativeArray<TNative>(SharedArray<T, TNative> self) => self.m_Native;
+
         public static implicit operator T[](SharedArray<T, TNative> self)
         {
 #if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
@@ -72,11 +75,6 @@ namespace Stella3D
             AtomicSafetyHandle.CheckWriteAndThrow(self.m_SafetyHandle);
 #endif
             return self.m_Managed;
-        }
-
-        public static implicit operator NativeArray<TNative>(SharedArray<T, TNative> self)
-        {
-            return self.m_Native;
         }
 
         protected void Initialize(T[] managed)
@@ -140,6 +138,6 @@ namespace Stella3D
             return (IEnumerator<T>) m_Managed.GetEnumerator();
         }
 
-        IEnumerator IEnumerable.GetEnumerator() { return GetEnumerator(); }
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }
