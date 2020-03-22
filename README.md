@@ -19,10 +19,26 @@ We want to get the compiler-specific performance advantage of using those new ty
 
 ## Safety
 
-When accessing the data as a managed array, the job safety system makes sure that no jobs are reading or writing the data, using the normal job safety system
+Unity's job system has a [safety system for reading & writing data](https://docs.unity3d.com/Manual/JobSystemSafetySystem.html) (in the Editor only).  This catches cases where a data race would occur and warns you about it.
 
-(more detail on safety system / integration with it goes here)
+SharedArray _works with this safety system_, so when you access the data on the main thread, the system knows whether it is safe to read or write, just like using a `NativeArray` allocated the normal way.
 
+Before any of the the system checks that no jobs are using the data.
+
+```csharp
+SharedArray<T> sharedArray;            // created elsewhere 
+
+// all 4 of these operations will check that no jobs are using the data.
+T[] asNormalArray = sharedArray; 
+sharedArray.Clear();
+sharedArray.Resize(32);
+sharedArray.Dispose();
+
+// Enumerating in either of these ways will check if any jobs are writing to the data, but allow other readers
+foreach(var element in sharedArray) { }
+
+var enumerator = sharedArray.GetEnumerator();
+```
 
 ## Aliasing
 
