@@ -9,7 +9,7 @@ There are a number of APIs in Unity (particularly ones that date from before mod
 
 In 2018+, we have the C# job system & burst compiler, which allow for much more efficient CPU-side processing.
 
-But there are two points of friction / inefficiency when it comees to bridging the gap between these two:
+But there are two points of friction / inefficiency when it comes to bridging the gap between these two:
  
 1) you have to use `NativeArray<T>` in jobs, which means if you want to do some calculations in a job and pass that data to a method that takes `T[]`, you need to do some wasteful copying.
 
