@@ -49,29 +49,19 @@ namespace Stella3D
             Initialize(new T[size]);
         }
 
-        static unsafe void CheckTypesAreEqualSize()
-        {
-            if (sizeof(T) != sizeof(TNative))
-            {
-                throw new InvalidOperationException(
-                    $"size of native alias type {typeof(TNative).FullName} ({sizeof(TNative)} bytes) " +
-                    $"must be equal to size of type {typeof(T).FullName} ({sizeof(T)} bytes)");
-            }
-        }
-
         protected SharedArray() { }
         
         ~SharedArray() { Dispose(); }
         
         public ref T GetPinnableReference() => ref m_Managed[0];
+        public unsafe void* GetPointer() => m_Native.GetUnsafePtr();
         
-        // implicit conversion mean you can pass a SharedArray where either type of NativeArray is expected
+        // implicit conversion means you can pass a SharedArray where either NativeArray or [] is expected
         public static implicit operator NativeArray<TNative>(SharedArray<T, TNative> self) => self.m_Native;
 
         public static implicit operator T[](SharedArray<T, TNative> self)
         {
 #if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
-            // CheckWrite also checks for any other readers
             AtomicSafetyHandle.CheckWriteAndThrow(self.m_SafetyHandle);
 #endif
             return self.m_Managed;
@@ -80,13 +70,18 @@ namespace Stella3D
         protected void Initialize(T[] managed)
         {
             m_Managed = managed;
-            // Unity's garbage collector doesn't move objects around, so this should not even be necessary.
-            // there's not much downside to playing it safe, though
-            m_GcHandle = GCHandle.Alloc(m_Managed, GCHandleType.Pinned);
-            InitializeNative();
+            Initialize();
         }
 
-        protected unsafe void InitializeNative()
+        void Initialize()
+        {
+            // Unity's default garbage collector doesn't move objects around, so pinning the array in memory
+            // should not even be necessary. better safe than sorry, though
+            m_GcHandle = GCHandle.Alloc(m_Managed, GCHandleType.Pinned);
+            CreateNativeAlias();
+        }
+
+        protected unsafe void CreateNativeAlias()
         {
             // this is the trick to making a NativeArray view of a managed array (or any pointer)
             fixed (void* ptr = m_Managed)
@@ -107,23 +102,19 @@ namespace Stella3D
                 return;
             
 #if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
-            // no jobs can be using the data when we resize it
-            AtomicSafetyHandle.CheckWriteAndThrow(m_SafetyHandle);
-#endif
-            if (m_GcHandle.IsAllocated) m_GcHandle.Free();
-            Array.Resize(ref m_Managed, newSize);
-            m_GcHandle = GCHandle.Alloc(m_Managed, GCHandleType.Pinned);
-
-#if UNITY_EDITOR
+            AtomicSafetyHandle.CheckDeallocateAndThrow(m_SafetyHandle);
             AtomicSafetyHandle.Release(m_SafetyHandle);
 #endif
-            InitializeNative();
+            if (m_GcHandle.IsAllocated) m_GcHandle.Free();
+
+            Array.Resize(ref m_Managed, newSize);
+            Initialize();
         }
         
         public void Dispose()
         {
 #if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
-            AtomicSafetyHandle.EnforceAllBufferJobsHaveCompletedAndRelease(m_SafetyHandle);
+            AtomicSafetyHandle.CheckDeallocateAndThrow(m_SafetyHandle);
 #endif
             m_Managed = null;
             if (m_GcHandle.IsAllocated) m_GcHandle.Free();
@@ -132,12 +123,24 @@ namespace Stella3D
         public IEnumerator<T> GetEnumerator()
         {
 #if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
-            // CheckWrite also checks for any other readers
-            AtomicSafetyHandle.CheckWriteAndThrow(m_SafetyHandle);
+            // Unlike the other safety checks, only check if it's safe to read.
+            // Enumerating an array of structs gives the user copies of each element, since structs pass by value.
+            // This means that the source memory can't be modified while enumerating.
+            AtomicSafetyHandle.CheckReadAndThrow(m_SafetyHandle);
 #endif
-            return (IEnumerator<T>) m_Managed.GetEnumerator();
+            return ((IEnumerable<T>) m_Managed).GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        
+        static unsafe void CheckTypesAreEqualSize()
+        {
+            if (sizeof(T) != sizeof(TNative))
+            {
+                throw new InvalidOperationException(
+                    $"size of native alias type '{typeof(TNative).FullName}' ({sizeof(TNative)} bytes) " +
+                    $"must be equal to size of source type '{typeof(T).FullName}' ({sizeof(T)} bytes)");
+            }
+        }
     }
 }
