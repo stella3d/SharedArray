@@ -23,12 +23,12 @@ Unity's job system has a [safety system for reading & writing data](https://docs
 
 SharedArray _works with this safety system_, so when you access the data on the main thread, the system knows whether it is safe to read or write, just like using a `NativeArray` allocated the normal way.
 
-Before any of the the system checks that no jobs are using the data.
+Here's all of the operations that include a check of the safety system.
 
 ```csharp
 SharedArray<T> sharedArray;            // created elsewhere 
 
-// all 4 of these operations will check that no jobs are using the data.
+// These 4 operations will check that no jobs are using the data, in any way
 T[] asNormalArray = sharedArray; 
 sharedArray.Clear();
 sharedArray.Resize(32);
