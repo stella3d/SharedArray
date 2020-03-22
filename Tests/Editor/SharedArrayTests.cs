@@ -98,7 +98,7 @@ namespace Stella3D.Tests
         }
         
         [Test]
-        public void GetEnumerator()
+        public void GetEnumerator_BasicSuccess()
         {
             var shared = new SharedArray<float>(4);
             var asManaged = (float[]) shared;
@@ -131,6 +131,34 @@ namespace Stella3D.Tests
             // enumerating structs doesn't allow mutating the data, so if a job is only reading, enumerating is fine
             Assert.DoesNotThrow(() => { foreach (var e in shared) { } });
             readOnlyJobHandle.Complete();
+        }
+        
+        [Test]
+        public void ImplicitCastToManaged_ThrowsIfWriteSafetyViolated()
+        {
+            var shared = new SharedArray<double>(4);
+            // casting to T[] is allowed when no jobs are writing to the data
+            Assert.DoesNotThrow(() => { double[] asManaged = shared; });
+            
+            var writeJobHandle = new WriteTestJob<double>(shared).Schedule();
+            
+            // Because there is an uncompleted job scheduled to writes to the data, casting to T[] should throw
+            Assert.Throws<InvalidOperationException>(() => { double[] asManaged = shared; });
+
+            writeJobHandle.Complete();
+            // no jobs are using the data, casting to T[] is allowed again
+            Assert.DoesNotThrow(() => { double[] asManaged = shared; });
+            
+            var readOnlyJobHandle = new ReadOnlyTestJob<double>(shared).Schedule();
+
+            // when casting to T[] we assume it will be written to, since we can't know what
+            // the user is doing with the data while it's being used as T[].
+            // So, trying to cast here should throw because an uncompleted job is reading the data   
+            Assert.Throws<InvalidOperationException>(() => { double[] asManaged = shared; });
+            readOnlyJobHandle.Complete();
+            
+            // Now that all jobs writing to the data are done, casting to T[] is allowed again
+            Assert.DoesNotThrow(() => { double[] asManaged = shared; });
         }
         
         public struct WriteTestJob<T> : IJob where T: unmanaged
