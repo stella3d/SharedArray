@@ -24,7 +24,7 @@ namespace Stella3D
     /// <typeparam name="TNative">
     /// The element type in the NativeArray representation.  Must be the same size as T
     /// </typeparam>
-    public class SharedArray<T, TNative> : IDisposable, IEnumerable<T> 
+    public class SharedArray<T, TNative> : IDisposable, IEnumerable<T>
         where T : unmanaged 
         where TNative : unmanaged
     {
@@ -51,11 +51,6 @@ namespace Stella3D
 
         protected SharedArray() { }
         
-        ~SharedArray() { Dispose(); }
-        
-        public ref T GetPinnableReference() => ref m_Managed[0];
-        public unsafe void* GetPointer() => m_Native.GetUnsafePtr();
-        
         // implicit conversion means you can pass a SharedArray where either NativeArray or [] is expected
         public static implicit operator NativeArray<TNative>(SharedArray<T, TNative> self) => self.m_Native;
 
@@ -76,7 +71,7 @@ namespace Stella3D
         void Initialize()
         {
             // Unity's default garbage collector doesn't move objects around, so pinning the array in memory
-            // should not even be necessary. better safe than sorry, though
+            // should not even be necessary. Better to be safe, though
             m_GcHandle = GCHandle.Alloc(m_Managed, GCHandleType.Pinned);
             CreateNativeAlias();
         }
@@ -89,7 +84,7 @@ namespace Stella3D
                 m_Native = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<TNative>
                     (ptr, m_Managed.Length, Allocator.None);
             }
-
+            
 #if UNITY_EDITOR
             m_SafetyHandle = AtomicSafetyHandle.Create();
             NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref m_Native, m_SafetyHandle);
@@ -110,11 +105,22 @@ namespace Stella3D
             Array.Resize(ref m_Managed, newSize);
             Initialize();
         }
-        
-        public void Dispose()
+
+        public void Clear()
         {
 #if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
+            AtomicSafetyHandle.CheckWriteAndThrow(m_SafetyHandle);
+#endif
+            Array.Clear(m_Managed, 0, m_Managed.Length);
+        }
+
+        public void Dispose()
+        {
+            if (m_Managed == null)
+                return;
+#if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
             AtomicSafetyHandle.CheckDeallocateAndThrow(m_SafetyHandle);
+            AtomicSafetyHandle.Release(m_SafetyHandle);
 #endif
             m_Managed = null;
             if (m_GcHandle.IsAllocated) m_GcHandle.Free();
@@ -133,6 +139,10 @@ namespace Stella3D
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         
+        public ref T GetPinnableReference() => ref m_Managed[0];
+        
+        ~SharedArray() { Dispose(); }
+                
         static unsafe void CheckTypesAreEqualSize()
         {
             if (sizeof(T) != sizeof(TNative))

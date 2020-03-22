@@ -3,7 +3,6 @@ using System.Linq;
 using NUnit.Framework;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-using Unity.Jobs;
 using UnityEngine;
 
 namespace Stella3D.Tests
@@ -11,7 +10,7 @@ namespace Stella3D.Tests
     public class SharedArrayTests
     {
         [Test]
-        public void RepresentationsEqual()
+        public void BothRepresentations_ReferToSameData()
         {
             var shared = new SharedArray<float>(8);
             
@@ -49,7 +48,7 @@ namespace Stella3D.Tests
         }
         
         [Test]
-        public unsafe void GetPinnableReferenceReturnsCorrectPointer()
+        public unsafe void GetPinnableReference_ReturnsCorrectPointer()
         {
             var shared = new SharedArray<Vector4>(4);
             fixed (Vector4* arrayPtr = (Vector4[]) shared)
@@ -58,7 +57,7 @@ namespace Stella3D.Tests
         }
         
         [Test]
-        public void UnequalSizeTypesConstructorThrows()
+        public void Constructor_ThrowsIf_TypesAreNotEqualSize()
         {
             try
             {
@@ -96,7 +95,32 @@ namespace Stella3D.Tests
             Assert.AreEqual(resizedLength, managedAfterResize.Length);
             Assert.AreEqual(resizedLength, ((NativeArray<Vector3>)shared).Length);
         }
+
+        [Test]
+        public void Resize_ThrowsIf_AnyJobsAreUsingData()
+        {
+            var shared = new SharedArray<Vector2>(4);
+            AssertSafety.ThrowsIfAnyDataUsers_SingleCall(shared, () => shared.Resize(8));
+        }
+
+        [Test]
+        public void Clear_BasicSuccess()
+        {
+            var managed = new[] { 10, 8, 30, 20 };
+            var shared = new SharedArray<int>(managed);
+            shared.Clear();
+
+            for (int i = 0; i < managed.Length; i++)
+                Assert.Zero(managed[i]);
+        }
         
+        [Test]
+        public void Clear_ThrowsIf_AnyJobsAreUsingData()
+        {
+            var shared = new SharedArray<int>(new[] { 6, 9, 4, 2 });
+            AssertSafety.ThrowsIfAnyJobsAreUsingData(shared, shared.Clear);
+        }
+
         [Test]
         public void GetEnumerator_BasicSuccess()
         {
@@ -111,68 +135,29 @@ namespace Stella3D.Tests
         }
         
         [Test]
-        public void GetEnumerator_ThrowsIfReadSafetyViolated()
+        public void GetEnumerator_ThrowsIf_AnyJobsAreWriting()
         {
             var shared = new SharedArray<int>(4);
-            // enumerating is allowed when no jobs are writing to the data
-            Assert.DoesNotThrow(() => { foreach (var e in shared) { } });
-            
-            var writeJobHandle = new WriteTestJob<int>(shared).Schedule();
-            
-            // Because there is an uncompleted job scheduled to writes to the data, enumerating the data should throw
-            Assert.Throws<InvalidOperationException>(() => { foreach (var e in shared) { } });
+            TestDelegate enumerateAction = () => { foreach (var e in shared) { } };
 
-            writeJobHandle.Complete();
-            // Now that all jobs writing to the data are done, enumerating the data is allowed again
-            Assert.DoesNotThrow(() => { foreach (var e in shared) { } });
-            
-            var readOnlyJobHandle = new ReadOnlyTestJob<int>(shared).Schedule();
-            
-            // enumerating structs doesn't allow mutating the data, so if a job is only reading, enumerating is fine
-            Assert.DoesNotThrow(() => { foreach (var e in shared) { } });
-            readOnlyJobHandle.Complete();
+            AssertSafety.ThrowsIfAnyScheduledWriters(shared, enumerateAction);
+            // it's fine if other things are reading while we enumerate, because enumerating returns copies of structs,
+            // so the source data won't be changed by the enumerator
+            AssertSafety.DoesNotThrowIfAnyScheduledReaders(shared, enumerateAction);
+        }
+
+        [Test]
+        public void ImplicitCastToManagedArray_ThrowsIf_AnyJobsAreUsingData()
+        {
+            var shared = new SharedArray<double>(4);
+            AssertSafety.ThrowsIfAnyJobsAreUsingData(shared, () => { double[] asManaged = shared; });
         }
         
         [Test]
-        public void ImplicitCastToManaged_ThrowsIfWriteSafetyViolated()
+        public void Dispose_ThrowsIf_AnyJobsAreUsingData()
         {
-            var shared = new SharedArray<double>(4);
-            // casting to T[] is allowed when no jobs are writing to the data
-            Assert.DoesNotThrow(() => { double[] asManaged = shared; });
-            
-            var writeJobHandle = new WriteTestJob<double>(shared).Schedule();
-            
-            // Because there is an uncompleted job scheduled to writes to the data, casting to T[] should throw
-            Assert.Throws<InvalidOperationException>(() => { double[] asManaged = shared; });
-
-            writeJobHandle.Complete();
-            // no jobs are using the data, casting to T[] is allowed again
-            Assert.DoesNotThrow(() => { double[] asManaged = shared; });
-            
-            var readOnlyJobHandle = new ReadOnlyTestJob<double>(shared).Schedule();
-
-            // when casting to T[] we assume it will be written to, since we can't know what
-            // the user is doing with the data while it's being used as T[].
-            // So, trying to cast here should throw because an uncompleted job is reading the data   
-            Assert.Throws<InvalidOperationException>(() => { double[] asManaged = shared; });
-            readOnlyJobHandle.Complete();
-            
-            // Now that all jobs writing to the data are done, casting to T[] is allowed again
-            Assert.DoesNotThrow(() => { double[] asManaged = shared; });
-        }
-        
-        public struct WriteTestJob<T> : IJob where T: unmanaged
-        {
-            public NativeArray<T> Values;
-            public WriteTestJob(NativeArray<T> values) { Values = values; }
-            public void Execute() { }
-        }
-        
-        public struct ReadOnlyTestJob<T> : IJob where T: unmanaged
-        {
-            [ReadOnly] public NativeArray<T> Values;
-            public ReadOnlyTestJob(NativeArray<T> values) { Values = values; }
-            public void Execute() { }
+            var shared = new SharedArray<int>(new[] { 3, 0, 3, 0 });
+            AssertSafety.ThrowsIfAnyDataUsers_SingleCall(shared, shared.Dispose);
         }
     }
 }
