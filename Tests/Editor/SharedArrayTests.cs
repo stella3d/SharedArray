@@ -1,5 +1,7 @@
-﻿using NUnit.Framework;
+﻿using System;
+using NUnit.Framework;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 
 namespace Stella3D.Tests
@@ -28,6 +30,47 @@ namespace Stella3D.Tests
                 Assert.IsTrue((i * 2f).Equals(nativeElement));
                 Assert.IsTrue(asManaged[i].Equals(nativeElement));
             }
+            
+            shared.Dispose();
+        }
+        
+        [Test]
+        public unsafe void ManagedAndNativeHaveSamePointers()
+        {
+            var shared = new SharedArray<Vector4>(4);
+            fixed (void* managedPtr = (Vector4[]) shared)
+            {
+                var nativePtr = ((NativeArray<Vector4>) shared).GetUnsafeReadOnlyPtr();
+                Assert.IsTrue(managedPtr == nativePtr);
+            }
+        }
+        
+        [Test]
+        public unsafe void GetPinnableReferenceReturnsCorrectPointer()
+        {
+            var shared = new SharedArray<Vector4>(4);
+            fixed (Vector4* ptrFromManagedArray = (Vector4[]) shared)
+            {
+                fixed (Vector4* ptrFromPinRef = shared)
+                {
+                    Assert.IsTrue(ptrFromManagedArray == ptrFromPinRef);
+                }
+            }
+        }
+        
+        [Test]
+        public void UnequalSizeTypesConstructorThrows()
+        {
+            try
+            {
+                var shared = new SharedArray<Vector4, float>(8);
+                throw new Exception("Shouldn't get here, the above constructor should throw!");
+            }
+            catch (InvalidOperationException e)
+            {
+                Assert.NotNull(e.Message);
+                Assert.IsTrue(e.Message.Contains("size"));  // is the exception message the intended one ?
+            }
         }
         
         [Test]
@@ -42,7 +85,7 @@ namespace Stella3D.Tests
                 asManaged[i] = Vector3.one * i;
             }
             
-            Assert.AreEqual(initialLength, asManaged.Length);
+            Assert.AreEqual(initialLength, shared.Length);
             Assert.AreEqual(initialLength, ((NativeArray<Vector3>)shared).Length);
             
             const int resizedLength = 16;
@@ -54,7 +97,7 @@ namespace Stella3D.Tests
                 managedAfterResize[i] = Vector3.one * i;
             }
             
-            Assert.AreEqual(resizedLength, managedAfterResize.Length);
+            Assert.AreEqual(resizedLength, shared.Length);
             Assert.AreEqual(resizedLength, ((NativeArray<Vector3>)shared).Length);
             
             for (int i = 0; i < managedAfterResize.Length; i++)
