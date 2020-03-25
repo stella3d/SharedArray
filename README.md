@@ -53,7 +53,6 @@ Aliasing was made to eliminate the overhead of converting between analogous type
 
 These `Unity.Mathematics` types have optimizations specific to the [Burst compiler](https://docs.unity3d.com/Packages/com.unity.burst@0.2/manual/index.html), and replace the existing Unity math structs and methods.
   
-We want to get the compiler-specific performance advantage of using those new types, without the overhead of converting back from `Unity.Mathematics` types to `UnityEngine` types (such as `float4` -> `Vector4` or `float4x4` -> `Matrix4x4`).
-
+We want to get the compiler-specific performance advantage of using those new types, without the overhead of converting back from `Unity.Mathematics` types. 
 For types that are laid out the same in memory, we can just treat one like the other.  Since we do this for the whole array, there is never any conversion between types happening, and thus no overhead - it's just a different "view" on the same memory.
 
