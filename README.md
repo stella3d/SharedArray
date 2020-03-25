@@ -32,10 +32,6 @@ var enumerator = sharedArray.GetEnumerator();
 
 It's possible to have the `NativeArray` representation of the data be of a different type than the source managed array.  
 
-This is how we can get around the overhead of converting from `Unity.Mathematics` types back to `UnityEngine` types (for types that are identical in memory). 
-
-
-
 To do so, create the `SharedArray` with 2 types instead of 1 :
 
 ```csharp
