@@ -1,7 +1,7 @@
 # SharedArray
 A `SharedArray` is a segment of memory that is represented both as a normal C# array `T[]`, and a Unity [`NativeArray<T>`](https://docs.unity3d.com/ScriptReference/Unity.Collections.NativeArray_1.html).
 
-It's designed to reduce the overhead of communicating between C# job data in `NativeArray` and APIs that use a normal arrays of structs, such as [Graphics.DrawMeshInstanced()](https://docs.unity3d.com/ScriptReference/Graphics.DrawMeshInstanced.html), by eliminating two the need to copy data.
+It's designed to reduce the overhead of communicating between C# job data in `NativeArray` and APIs that use a normal array of structs, such as [Graphics.DrawMeshInstanced()](https://docs.unity3d.com/ScriptReference/Graphics.DrawMeshInstanced.html), by eliminating two the need to copy data.
 
 (this is **close to ready for real use**, i will make a release when i think it's polished enough for people to use)
 
