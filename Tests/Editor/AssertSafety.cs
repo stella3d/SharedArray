@@ -12,17 +12,13 @@ namespace Stella3D.Tests
             AssertCheck(new WriteTestJob<T>(shared), safetyCheckedAction);
         }
         
-        public static void ThrowsIfAnyScheduledReaders<T>(SharedArray<T> shared, TestDelegate safetyCheckedAction) where T : unmanaged
-        {
-            AssertCheck(new ReadOnlyTestJob<T>(shared), safetyCheckedAction);
-        }
-        
         public static void ThrowsIfAnyJobsAreUsingData<T>(SharedArray<T> shared, TestDelegate safetyCheckedAction) where T : unmanaged
         {
             AssertCheck(new ReadOnlyTestJob<T>(shared), safetyCheckedAction);
             AssertCheck(new WriteTestJob<T>(shared), safetyCheckedAction);
         }
 
+        // for methods like .Dispose() where calling them more than once has undesirable side effects
         public static void ThrowsIfAnyDataUsers_SingleCall<T>(SharedArray<T> shared, TestDelegate safetyCheckedAction) 
             where T : unmanaged
         {

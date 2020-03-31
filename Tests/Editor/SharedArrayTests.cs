@@ -35,7 +35,7 @@ namespace Stella3D.Tests
                 Assert.IsTrue(asManaged[i].Equals(nativeElement));
             }
         }
-        
+
         [Test]
         public unsafe void ManagedAndNativeHaveSamePointers()
         {
