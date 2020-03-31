@@ -26,6 +26,8 @@ NativeArray<Vector4> asNative = shared;
 Vector4[] asManaged = shared;
 ```
 
+Please see the [demo project](https://github.com/stella3d/SharedArray-Demo) for a more detailed usage example.
+
 
 ## Safety System
 
