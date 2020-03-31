@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -39,17 +40,17 @@ namespace Stella3D
 
         public SharedArray(T[] managed)
         {
-            CheckTypesAreEqualSize();
+            ThrowIfTypesNotEqualSize();
             Initialize(managed);
         }
         
         public SharedArray(int size)
         {
-            CheckTypesAreEqualSize();
+            ThrowIfTypesNotEqualSize();
             Initialize(new T[size]);
         }
 
-        protected SharedArray() { }
+        protected SharedArray() { }    
         
         // implicit conversion means you can pass a SharedArray where either NativeArray or [] is expected
         public static implicit operator NativeArray<TNative>(SharedArray<T, TNative> self) => self.m_Native;
@@ -90,13 +91,16 @@ namespace Stella3D
             NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref m_Native, m_SafetyHandle);
 #endif
         }
+        
+        // allows taking pointer of SharedArray in 'fixed' statements 
+        public ref T GetPinnableReference() => ref m_Managed[0];
 
         public void Resize(int newSize)
         {
             if (newSize == m_Managed.Length) 
                 return;
             
-#if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
+#if UNITY_EDITOR
             AtomicSafetyHandle.CheckDeallocateAndThrow(m_SafetyHandle);
             AtomicSafetyHandle.Release(m_SafetyHandle);
 #endif
@@ -108,27 +112,15 @@ namespace Stella3D
 
         public void Clear()
         {
-#if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
+#if UNITY_EDITOR
             AtomicSafetyHandle.CheckWriteAndThrow(m_SafetyHandle);
 #endif
             Array.Clear(m_Managed, 0, m_Managed.Length);
         }
 
-        public void Dispose()
-        {
-            if (m_Managed == null)
-                return;
-#if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
-            AtomicSafetyHandle.CheckDeallocateAndThrow(m_SafetyHandle);
-            AtomicSafetyHandle.Release(m_SafetyHandle);
-#endif
-            m_Managed = null;
-            if (m_GcHandle.IsAllocated) m_GcHandle.Free();
-        }
-
         public IEnumerator<T> GetEnumerator()
         {
-#if UNITY_EDITOR && !DISABLE_SHAREDARRAY_SAFETY
+#if UNITY_EDITOR
             // Unlike the other safety checks, only check if it's safe to read.
             // Enumerating an array of structs gives the user copies of each element, since structs pass by value.
             // This means that the source memory can't be modified while enumerating.
@@ -138,12 +130,22 @@ namespace Stella3D
         }
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-        
-        public ref T GetPinnableReference() => ref m_Managed[0];
-        
+
+        public void Dispose()
+        {
+            if (m_Managed == null)
+                return;
+#if UNITY_EDITOR
+            AtomicSafetyHandle.CheckDeallocateAndThrow(m_SafetyHandle);
+            AtomicSafetyHandle.Release(m_SafetyHandle);
+#endif
+            m_Managed = null;
+            if (m_GcHandle.IsAllocated) m_GcHandle.Free();
+        }
+
         ~SharedArray() { Dispose(); }
-                
-        static unsafe void CheckTypesAreEqualSize()
+
+        static unsafe void ThrowIfTypesNotEqualSize()
         {
             if (sizeof(T) != sizeof(TNative))
             {
