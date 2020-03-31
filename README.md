@@ -3,7 +3,29 @@ A `SharedArray` is a segment of memory that is represented both as a normal C# a
 
 It's designed to reduce the overhead of communicating between C# job data in `NativeArray` and APIs that use a normal array of structs, such as [Graphics.DrawMeshInstanced()](https://docs.unity3d.com/ScriptReference/Graphics.DrawMeshInstanced.html), by eliminating the need to copy data.
 
-(this is **close to ready for real use**, i will make a release when i think it's polished enough for people to use)
+## Installation
+
+Minimum Unity version is 2018.4.
+
+You can install one of two ways.
+
+1) Grab the latest .unitypackage [from the Releases Tab](https://github.com/stella3d/SharedArray/releases) and import it to your project.
+
+2) Install as a package via [openUPM](https://openupm.com/) 
+```
+openupm add com.stella3d.sharedarray
+```
+
+## Usage
+
+
+```csharp
+// SharedArray implicitly converts to both managed and native array
+SharedArray<Vector4> shared = new SharedArray<Vector4>(8);
+NativeArray<Vector4> asNative = shared;
+Vector4[] asManaged = shared;
+```
+
 
 ## Safety System
 
