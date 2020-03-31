@@ -28,6 +28,14 @@ foreach(var element in sharedArray) { }
 var enumerator = sharedArray.GetEnumerator();
 ```
 
+The safest way to use SharedArray is: 
+1) Manipulate data in a C# job, using the `NativeArray<T>` representation
+2) Convert to a managed array `T[]` only right before you use it on the main thread.  
+
+This is important if you want the safety system to work - if you pass around a reference to the managed representation, you won't get the safety system checks.
+
+You can see this pattern demonstrated in the [demo project](https://github.com/stella3d/SharedArray-Demo).
+
 ## Aliasing 
 
 It's possible to have the `NativeArray` representation of the data be of a different type than the source managed array.  
