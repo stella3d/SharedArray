@@ -7,14 +7,7 @@ It's designed to reduce the overhead of communicating between C# job data in `Na
 
 Minimum Unity version is 2018.4.
 
-You can install one of two ways.
-
-1) Grab the latest .unitypackage [from the Releases Tab](https://github.com/stella3d/SharedArray/releases) and import it to your project.
-
-2) Install as a package via [openUPM](https://openupm.com/) 
-```
-openupm add com.stella3d.sharedarray
-```
+To install, grab the latest .unitypackage [from the Releases Tab](https://github.com/stella3d/SharedArray/releases) and import it to your project.
 
 ## Usage
 
